@@ -1,3 +1,3 @@
 <?php
-echo "aftonBot"
+echo "ce2fd7b8"
 ?>
