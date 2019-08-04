@@ -1,3 +1,5 @@
 <?php
-echo "ce2fd7b8"
+if($_POST){
+  echo "ce2fd7b8";
+}
 ?>
