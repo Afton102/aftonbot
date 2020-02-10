@@ -2,10 +2,12 @@
 require_once("FormulaParser.php");
 use FormulaParser\FormulaParser;
 $lang=0;
-$mapping=['database'=>'database','afbs'=>'afbs','vk'=>'vk','formula'=>'formula','conditions'=>'conditions',"equal"=>'equal','noequal'=>'noequal'];
+$mapping=['database'=>'database','afbs'=>'afbs','vk'=>'vk','formula'=>'formula','conditions'=>'conditions',"equal"=>'equal','noequal'=>'noequal','nl'=>'nl'];
 $vars=[];
+$input="";
 $deb=false;
 $dexec=false;
+$inter="web";
 $tokens=array();
 $configs=array();
 $sepids=array(array());
@@ -228,16 +230,40 @@ function funcs(string ...$arr){
 			switch($arr[0]){
 				case "print":
 					$out=array_substr($arr,1,count($arr));
-					echo "Вывод: ";
+					echo ">";
 					foreach($out as $ot)echo($ot);
 					echo (PHP_EOL);
 					return true;
 					break;
+				case "input":
+					return $GLOBALS['input'];
+					break;
+				case "stop":
+					exit;
+					break;
+			}
+			break;
+		case "conditions":
+			switch($arr[0]){
+				case "is_web":
+					return $GLOBALS['inter']==="web";
+					break;
+				case "is_vk":
+					return $GLOBALS['inter']==="vk";
+					break;
+				default: return false;
 			}
 			break;
 		case "equal":
-			return $arr[0];
+			return strval($arr[0])===strval($arr[1]);
 			break;
+		case "noequal":
+			return strval($arr[0])!==strval($arr[1]);
+			break;
+		case "nl":
+			return "\n";
+			break;	
+
 		default: return $ns;
 	}
 }
@@ -704,6 +730,7 @@ elseif($_POST['type']=="text"){
 	$dexec=true;
 }
 else {}
+if($_POST['inp'])$input=$_POST['inp'];
 $prog.="\n";
 if($deb)echo("Код:\n".$prog."\n\n");
 
