@@ -135,29 +135,29 @@ function array_substr($arr,$start,$end){
 function is_alpha($str){
     if(ctype_alpha($str))return true;
     $str=mb_strtolower($str,"UTF-8");
-    $warr=array("а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я","ғ","ҙ","ҡ","ң","ө","ҫ","ү","һ","ә","?",".",":",'$','_');
+    $warr=array("а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я","ғ","ҙ","ҡ","ң","ө","ҫ","ү","һ","ә","?",".",":",'$','_',"@");
     if(in_array($str,$warr))return true;
     return false;
 }
 function is_alnum($str){
     if(ctype_alnum($str))return true;
     $str=mb_strtolower($str,"UTF-8");
-    $warr=array("а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я","ғ","ҙ","ҡ","ң","ө","ҫ","ү","һ","ә","?",".",":",'$','_',"0","1","2","3","4","5","6","7","8","9");
+    $warr=array("а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я","ғ","ҙ","ҡ","ң","ө","ҫ","ү","һ","ә","?",".",":",'$','_',"@","0","1","2","3","4","5","6","7","8","9");
     if(in_array($str,$warr))return true;
     return false;
 }
 function is_operator($str){
     switch($str){
         case "+":
-        case "-":
+        case "=":
+        /*case "-":
         case "*":
         case "/":
         case "^":
-        case "=":
         //case "<":
         //case ">":
         //case ".":
-        //case ",":
+        //case ",":*/
             return true;
         default: return false;
     }
@@ -183,6 +183,7 @@ function is_number($str){
         case "7":
         case "8":
         case "9":
+        //case ".":
             return true;
         default: return false;
     }
@@ -218,6 +219,17 @@ function setvar(array $obj){
 function funcs(string ...$arr){
 	$ns=$arr[0];
 	$arr=array_substr($arr,1,count($arr));
+	$arr2=$arr;
+	$flagarr=array_filter($arr,function ($str){return ($str[0]==="@")?true:false;});
+	$flags=array();
+	foreach ($flagarr as $key => $value) {
+		if($sep=strpos($value, ":")){
+			$flags[substr($value,1,$sep-1)]=$arr2[$key+1];
+		}
+		else $flags[substr($value,1,$sep-1)]=true;
+		unset($arr[$key]);
+	}
+
 	if(isset($GLOBALS['mapping'][$ns])){
 		$ns=$GLOBALS['mapping'][$ns];
 	}
@@ -241,6 +253,64 @@ function funcs(string ...$arr){
 				case "stop":
 					exit;
 					break;
+			}
+			break;
+		case "math":
+			switch($arr[0]){
+				case "max":
+					return max(array_substr($arr,1,count($arr)));
+					break;
+				case "min":
+					return min(array_substr($arr,1,count($arr)));
+					break;
+				case "sum":
+					return array_sum(array_substr($arr,1,count($arr)));
+					break;
+				case "sub":
+					if($flags['sort']===true){
+						$tor=array_substr($arr,1,count($arr));
+						$arr_len=count($tor)-1;
+						sort($tor);
+						$res=intval($tor[$arr_len]);
+						for ($i = $arr_len-1; $i >= 0; $i--) {
+    						$res -= intval($tor[$i]);
+						}
+						return $res;
+					}
+					else {
+						$tor=array_substr($arr,1,count($arr));
+						$res = intval($tor[0]);
+						for ($i = 1; $i < count($tor); $i++) {
+						    $result -= intval($tor[$i]);
+						} 
+						return $res;
+					}
+				case "multi":
+					$tor=array_substr($arr,1,count($arr));
+					$res=1;
+					for($i=0;$i<count($tor);$i++)$res*=intval($tor[$i]);
+					return $res;
+					break;
+				/*case "div":
+					if($flags['sort']===true){
+						$tor=array_substr($arr,1,count($arr));
+						$arr_len=count($tor)-1;
+						sort($tor);
+						$res=$tor[$arr_len];
+						for ($i = $arr_len-1; $i >= 0; $i--) {
+    						$res -= $tor[$i];
+						}
+						return $res;
+					}
+					else {
+						$tor=array_substr($arr,1,count($arr));
+						$res = $tor[0];
+						for ($i = 1; $i < count($tor); $i++) {
+						    $result -= $tor[$i];
+						} 
+						return $res;
+					}*/
+				case "pi": return pi();break;
 			}
 			break;
 		case "conditions":
@@ -334,7 +404,12 @@ function tokenizer($prog){
 	    }
 	    if(!$vo&&!$no&&!$mo&&is_number($char)){
 	        $ts=$char;
+	        if($prog[$i-1]==="-")$ts="-".$ts;
 	        $no=true;
+	        if(!is_number($prog[$i+1])){
+	        	$no=false;
+	        	array_push($tokens,"`n`{$ts}");
+	        }
 	        continue;
 	    }
 	    if($nl){
@@ -383,11 +458,22 @@ function tokenizer($prog){
 	        if(is_alnum($prog[$i+1]))$ts=$ts.$char;
 	        else{
 	            $vo=false;
-	            /*if(is_afbsfunc($ts.$char)){
-	                //array_push($tokens,"`v`afbs","`o`.");
-	                array_push($tokens,"`v`afbs");
-	            }*/
-	            array_push($tokens,"`v`".$ts.$char);
+	            $ts.=$char;
+	            if(is_end($ts)){
+	            	array_push($tokens,"`o`end");
+	            	$nl=true;
+	            	$sepiter++;
+	      	 		array_push($endids,count($tokens)-1);
+	        		$sepids[$sepiter]=array();
+	            }
+	            array_push($tokens,"`v`".$ts);
+	            if(is_then("`v`".$ts)||is_else($ts)){
+	            	array_push($tokens,"`o`end");
+	            	$nl=true;
+	            	$sepiter++;
+	      	 		array_push($endids,count($tokens)-1);
+	        		$sepids[$sepiter]=array();
+	            }
 	        }
 	        continue;
 	    }
@@ -396,11 +482,25 @@ function tokenizer($prog){
 	        $ts=$char;
 	        if(!is_alnum($prog[$i+1])){//для одиночных символов
 	        	$vo=false;
+	            if(is_end($ts)){
+	            	array_push($tokens,"`o`end");
+	            	$nl=true;
+	            	$sepiter++;
+	      	 		array_push($endids,count($tokens)-1);
+	        		$sepids[$sepiter]=array();
+	            }
 	            array_push($tokens,"`v`".$ts);
+	            if(is_then("`v`".$ts)){
+	            	array_push($tokens,"`o`end");
+	            	$nl=true;
+	            	$sepiter++;
+	      	 		array_push($endids,count($tokens)-1);
+	        		$sepids[$sepiter]=array();
+	            }
 	        }
 	        continue;
 	    }
-	    if(!$so&&!$co&&!$comment&&!$no&&!$mo&&$char==";"){
+	    if(!$so&&!$co&&!$comment&&!$mo&&$char==";"){
 	        $nl=true;
 	        array_push($tokens,"`o`end");
 	        $sepiter++;
@@ -478,8 +578,9 @@ function parser($tokens){
 						$arrif=array_substr($value,1,array_keys($arr)[0]);
 						$phpcode.="funcs(\"".token_val($arrif[0])."\"";
 						$args="";
+						$first=true;
 						foreach ($arrif as $k => $val) {
-							if($k==0)continue;
+							if($first){$first=false;continue;}
 							$tT=token_type($val);
 							$tV=token_val($val);
 							if($bb){
@@ -505,7 +606,7 @@ function parser($tokens){
 									}
 									else if($GLOBALS['dexec'])echo("\n\n[math syntax error]\n\n");
 								}
-								($tV[0]=='$')?$args.=",{$tV}":$args.=",\"{$tV}\"";
+								($tV[0]=='$')?$args.=",\$_afbsvar_".substr($tV,1):$args.=",\"{$tV}\"";
 							}
 						}
 						$phpcode.=$args.")){".PHP_EOL;
@@ -527,10 +628,12 @@ function parser($tokens){
 						$arrif=array_substr($value,1,array_keys($arr)[0]);
 						$phpcode.="funcs(\"".token_val($arrif[0])."\"";
 						$args="";
+						$first=false;
 						foreach ($arrif as $k => $val) {
-							if($k==0)continue;
+							if($first){$first=false;continue;}
 							$tT=token_type($val);
 							$tV=token_val($val);
+							if($tV[0]=='$')$tV='$_afbsvar_'.substr($tV,1);
 							if($bb){
 								if($tT!="`b`")$args.="\"{$tV}\"";
 								else if($GLOBALS['dexec'])echo("\n\n[error]\n\n");
@@ -564,10 +667,126 @@ function parser($tokens){
 				}
 				elseif(is_while($tokenVal)){
 					$phpcode.="while(";
+					$arr=array_filter($value,"is_then");
+					if(!empty($arr)){
+						$bb=false;
+						$arrif=array_substr($value,1,array_keys($arr)[0]);
+						$tokt=token_type($arrif[0]);
+						$tokv=token_val($arrif[0]);
+						$ignor=false;
+						if($tokv[0]=="\$"){
+							$phpcode.="\$_afbsvar_".substr($tokv,1);
+							$ignor=true;
+						}
+						elseif($tokt=="`n`"){
+							$phpcode.="{$tokv}";
+							$ignor=true;
+						}
+						elseif($tokv=="true"||$tokv[0]=="false"){
+							$phpcode.="{$tokv}";
+							$ignor=true;
+						}
+						else $phpcode.="funcs(\"".token_val($arrif[0])."\"";
+						$args="";
+						$first=true;
+						if(!$ignor){
+							foreach ($arrif as $k => $val) {
+							if($first){$first=false;continue;}
+							$tT=token_type($val);
+							$tV=token_val($val);
+							if($tV[0]=='$')$tV='$_afbsvar_'.substr($tV,1);
+							if($bb){
+								if($tT!="`b`")$args.="\"{$tV}\"";
+								else if($GLOBALS['dexec'])echo("\n\n[error]\n\n");
+								$bb=false;
+							}
+							elseif($tT=="`b`"){
+								if($tV=="("){
+									$bb=true;
+									$args.=",funcs(";
+								}
+								elseif ($tV==")") {
+									$args.=")";
+								}
+							}
+							else {
+								if($tT=='`m`'){
+									$parser = new FormulaParser($tV, 2);
+									$result = $parser->getResult(); // [0 => 'done', 1 => 16.38]
+									if($result[0]=="done"){
+										$tV=$result[1];
+									}
+									else if($GLOBALS['dexec'])echo("\n\n[math syntax error]\n\n");
+								}
+								($tV[0]=='$')?$args.=",{$tV}":$args.=",\"{$tV}\"";
+							}
+						}
+						$phpcode.=$args.")){".PHP_EOL;
+					}
+					else $phpcode.=$args."){".PHP_EOL;//если строка, число или вар
+					}//иначе капец
 					//$op="while";
 				}
 				elseif(is_for($tokenVal)){
-					$phpcode.="for($i=0;$i=";
+					$phpcode.="for(\$_afbsvar_REPEAT=0".';'."\$_afbsvar_REPEAT".'<';
+					$arr=array_filter($value,"is_then");
+					if(!empty($arr)){
+						$bb=false;
+						$arrif=array_substr($value,1,array_keys($arr)[0]);
+						$tokt=token_type($arrif[0]);
+						$tokv=token_val($arrif[0]);
+						$ignor=false;
+						if($tokv[0]=="\$"){
+							$phpcode.="\$_afbsvar_".substr($tokv,1);
+							$ignor=true;
+						}
+						elseif($tokt=="`n`"){
+							$phpcode.="{$tokv}";
+							$ignor=true;
+						}
+						elseif($tokt=='`s`'){
+							$phpcode.="intval({$tokv})";
+							$ignor=true;
+						}
+						else $phpcode.="funcs(\"".token_val($arrif[0])."\"";
+						$args="";
+						$first=true;
+						if(!$ignor){
+							foreach ($arrif as $k => $val) {
+							if($first){$first=false;continue;}
+							$tT=token_type($val);
+							$tV=token_val($val);
+							if($tV[0]=='$')$tV='$_afbsvar_'.substr($tV,1);
+							if($bb){
+								if($tT!="`b`")$args.="\"{$tV}\"";
+								else if($GLOBALS['dexec'])echo("\n\n[error]\n\n");
+								$bb=false;
+							}
+							elseif($tT=="`b`"){
+								if($tV=="("){
+									$bb=true;
+									$args.=",funcs(";
+								}
+								elseif ($tV==")") {
+									$args.=")";
+								}
+							}
+							else {
+								if($tT=='`m`'){
+									$parser = new FormulaParser($tV, 2);
+									$result = $parser->getResult(); // [0 => 'done', 1 => 16.38]
+									if($result[0]=="done"){
+										$tV=$result[1];
+									}
+									else if($GLOBALS['dexec'])echo("\n\n[math syntax error]\n\n");
+								}
+								($tV[0]=='$')?$args.=",{$tV}":$args.=",\"{$tV}\"";
+							}
+						}
+						$phpcode.=$args.");\$_afbsvar_REPEAT++){".PHP_EOL;
+					}
+					else $phpcode.=$args.";\$_afbsvar_REPEAT++){".PHP_EOL;//если строка, число или вар
+					}//иначе капец
 					//$op="for";
 				}
 				elseif(is_end($tokenVal)){
@@ -577,8 +796,9 @@ function parser($tokens){
 				else{
 					$phpcode.="funcs(\"".token_val($value[0])."\"";
 					$args="";
+					$first=true;
 					foreach ($value as $k => $val) {
-						if($k==0)continue;
+						if($first){$first=false;continue;}
 						$tT=token_type($val);
 						$tV=token_val($val);
 						if($tV[0]=='$')$tV='$_afbsvar_'.substr($tV,1);
@@ -621,10 +841,12 @@ function parser($tokens){
 			$ki=false;
 			$bb=false;
 			$fo=false;
+			$first=true;
 	        foreach ($value as $k => $val) {
 				$tT=substr($val,0,3);
 				$tV=substr($val,3);
-				if($k==0){
+				if($first){
+					$first=false;
 					if($tT=="`v`"&&$tV[0]=='$'){
 						$phpcode.="setvar([0=>[".'\'$_afbsvar_'.substr($tV,1)."'";
 					}
@@ -665,6 +887,13 @@ function parser($tokens){
 							$phpcode.="{$tV}";
 							break;
 						}
+						elseif($tT=="`n`"){
+							$phpcode.="{$tV}";
+							break;
+						}
+						elseif($tT=="`s`"){
+							$phpcode.="\"{$tV}\"";
+						}
 						else {
 							$phpcode.="funcs(\"{$tV}\"";
 							$fo=true;
@@ -696,14 +925,14 @@ function parser($tokens){
 						}
 						elseif($GLOBALS['dexec']) echo("\n\n[math syntax error]\n\n");
 					}
-					($tV[0]=='$')?$phpcode.=",{$tV}":$phpcode.=",\"{$tV}\"";
+					($tV[0]=='$')?$phpcode.=",\$_afbsvar_".substr($tV,1):$phpcode.=",\"{$tV}\"";
 				}
 			}
 			($fo)?$phpcode.=")]]);".PHP_EOL:$phpcode.="]]);".PHP_EOL;
 	    }
 	}
-	if(!$GLOBALS['dexec']||($GLOBALS['dexec']&&$GLOBALS['deb']))echo "php".PHP_EOL.'$'."mapping=".var_export($GLOBALS['mapping'],true).';'.PHP_EOL.'$_afbsvar_hellomess="мэсс";'.PHP_EOL.$phpcode;
-	if($GLOBALS['dexec'])file_put_contents("code.php", '<'.'?'."php".PHP_EOL.'$'."mapping=".var_export($GLOBALS['mapping'],true).';'.PHP_EOL.'$_afbsvar_hellomess="мэсс";'.PHP_EOL.$phpcode.'?'.'>');
+	if(!$GLOBALS['dexec']||($GLOBALS['dexec']&&$GLOBALS['deb']))echo "php".PHP_EOL.'$'."mapping=".var_export($GLOBALS['mapping'],true).';'.PHP_EOL.$phpcode;
+	if($GLOBALS['dexec'])file_put_contents("code.php", '<'.'?'."php".PHP_EOL.'$'."mapping=".var_export($GLOBALS['mapping'],true).';'.PHP_EOL.$phpcode.'?'.'>');
 	if($GLOBALS['deb'])echo("\n\n");
 	if($GLOBALS['deb'])var_export($lines);
 	if($GLOBALS['deb'])echo("\nnamespaces:\n");
@@ -740,6 +969,7 @@ parser($tokens);
 if($GLOBALS['deb'])echo("---Exec php code---\n");
 if($GLOBALS['dexec'])require("code.php");
 if($GLOBALS['deb'])echo("---End exec php code---\n");
+if($GLOBALS['deb'])var_export($GLOBALS['tokens']);
 //var_export($mapping);
 /*for($i=0;$i<count($tokens);$i++){
     $type=$tokens[$i][1];
