@@ -1,4 +1,4 @@
-<p style="white-space: pre-line"><?php
+<?php
 require_once("FormulaParser.php");
 use FormulaParser\FormulaParser;
 $lang=0;
@@ -986,5 +986,5 @@ $answ="";
 foreach($tokens as $token)$answ.=$token."<br>";
 echo($answ."\n\n");*/
 
-?></p>
+?>
 
