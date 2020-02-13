@@ -226,7 +226,7 @@ function funcs(string ...$arr){
 		if($sep=strpos($value, ":")){
 			$flags[substr($value,1,$sep-1)]=$arr2[$key+1];
 		}
-		else $flags[substr($value,1,$sep-1)]=true;
+		else $flags[substr($value,1)]=true;
 		unset($arr[$key]);
 	}
 
@@ -243,8 +243,13 @@ function funcs(string ...$arr){
 				case "print":
 					$out=array_substr($arr,1,count($arr));
 					echo ">";
-					foreach($out as $ot)echo($ot);
-					echo (PHP_EOL);
+					foreach($out as $ot){
+						echo($ot);
+						if($flags['sep']===true)echo(' ');
+						elseif($flags['sep'])echo($flags['sep']);
+					}
+					if($flags["end"]&&$flags["end"]!==true)echo($flags["end"]);
+					else echo(PHP_EOL);
 					return true;
 					break;
 				case "input":
